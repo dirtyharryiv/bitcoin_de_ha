@@ -1,5 +1,7 @@
 """Custom component for tracking bitcoin.de currencies."""
 
+import logging
+
 from homeassistant.config_entries import (
     ConfigEntry,
 )
@@ -12,8 +14,17 @@ from homeassistant.helpers.entity_platform import (
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import (
+    ATTR_AVAIL,
+    ATTR_EUR_BAL,
+    ATTR_EUR_RATE,
+    ATTR_RESERV,
+    ATTR_TOTAL,
+    DOMAIN,
+)
 from .coordinator import BitcoinDeCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -79,14 +90,16 @@ class CryptoBalanceSensor(CoordinatorEntity, Entity):
 
     @property
     def name(self) -> str:
-        """Return the currencys name from bitcoin.de API."""
+        """Return the currencies name from bitcoin.de API."""
         return f"Bitcoin.de {self._currency} Balance"
 
     @property
     def state(self) -> float:
-        """Return the currencys total amount from bitcoin.de API."""
+        """Return the currencies total amount from bitcoin.de API."""
         return float(
-            self.coordinator.data.get(self._currency.lower(), {}).get("total_amount", 0)
+            self.coordinator.data.get("balances", {})
+            .get(self._currency.lower(), {})
+            .get(ATTR_TOTAL, 0)
         )
 
     @property
@@ -97,9 +110,19 @@ class CryptoBalanceSensor(CoordinatorEntity, Entity):
     @property
     def extra_state_attributes(self) -> dict:
         """Return additional attributes from bitcoin.de API."""
-        balance = self.coordinator.data.get(self._currency.lower(), {})
+        balance = self.coordinator.data.get("balances", {}).get(
+            self._currency.lower(), {}
+        )
+        rate = (
+            self.coordinator.data.get("eur_rates", {})
+            .get(self._currency.lower(), {})
+            .get("rate_weighted", 0)
+        )
+        total_amount = float(balance.get(ATTR_TOTAL, 0))
         return {
-            "available_amount": float(balance.get("available_amount", 0)),
-            "reserved_amount": float(balance.get("reserved_amount", 0)),
-            "total_amount": float(balance.get("total_amount", 0)),
+            ATTR_AVAIL: float(balance.get(ATTR_AVAIL, 0)),
+            ATTR_RESERV: float(balance.get(ATTR_RESERV, 0)),
+            ATTR_TOTAL: total_amount,
+            ATTR_EUR_RATE: float(rate),
+            ATTR_EUR_BAL: float(rate) * total_amount,
         }

@@ -6,11 +6,11 @@ import logging
 import time
 from datetime import timedelta
 
-from aiohttp import ClientSession
+from aiohttp import ClientError, ClientSession
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import API_URL, UPDATE_INTERVAL
+from .const import API_ACCOUNT_URL, API_RATES_URL, UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,7 +19,12 @@ class BitcoinDeCoordinator(DataUpdateCoordinator):
     """Coordinator to fetch data from Bitcoin.de API."""
 
     def __init__(
-        self, hass: HomeAssistant, session: ClientSession, api_key: str, api_secret: str
+        self,
+        hass: HomeAssistant,
+        session: ClientSession,
+        api_key: str,
+        api_secret: str,
+        currencies: list[str],
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
@@ -31,11 +36,15 @@ class BitcoinDeCoordinator(DataUpdateCoordinator):
         self.session = session
         self._api_key = api_key
         self._api_secret = api_secret
+        self._currencies = currencies
+        self.data = {"balances": {}, "eur_rates": {}}
 
     async def _async_update_data(self) -> dict:
         nonce = str(int(time.time() * 1_000_000))
         post_parameter_md5 = hashlib.md5(b"").hexdigest()
-        hmac_data = f"GET#{API_URL}#{self._api_key}#{nonce}#{post_parameter_md5}"
+        hmac_data = (
+            f"GET#{API_ACCOUNT_URL}#{self._api_key}#{nonce}#{post_parameter_md5}"
+        )
         signature = hmac.new(
             self._api_secret.encode(), hmac_data.encode(), hashlib.sha256
         ).hexdigest()
@@ -45,11 +54,37 @@ class BitcoinDeCoordinator(DataUpdateCoordinator):
             "X-API-SIGNATURE": signature,
         }
 
+        data = {}
+
         try:
-            async with self.session.get(API_URL, headers=headers) as response:
+            async with self.session.get(API_ACCOUNT_URL, headers=headers) as response:
                 response.raise_for_status()
-                data = await response.json()
-                return data.get("data", {}).get("balances", {})
+                balance_data = await response.json()
+                data["balances"] = balance_data.get("data", {}).get("balances", {})
+
         except Exception as error:
-            _LOGGER.exception("Request error")
+            _LOGGER.exception("Error fetching account balance")
             raise UpdateFailed from error
+
+        data["eur_rates"] = await self._fetch_currency_rates()
+
+        return data
+
+    async def _fetch_currency_rates(self) -> dict[str, float]:
+        """Fetch the current EUR rate for each selected currency."""
+        currency_rates = {}
+
+        for currency in self._currencies:
+            url = API_RATES_URL.format(currency.lower(), self._api_key)
+
+            try:
+                async with self.session.get(url) as response:
+                    response.raise_for_status()
+                    rate_data = await response.json()
+                    currency_rates[currency] = rate_data.get("rate", 0.0)
+
+            except (TimeoutError, ClientError) as error:
+                _LOGGER.warning("Error fetching EUR rate for %s: %s", currency, error)
+                currency_rates[currency] = None
+
+        return currency_rates
