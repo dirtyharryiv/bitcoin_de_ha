@@ -42,3 +42,7 @@ Each sensor provides the following attributes:
 - Ensure your API key has the necessary permissions to access balance data.
 - Check Home Assistant logs for errors related to this integration.
 - If you encounter issues, please open an issue on the [GitHub repository](https://github.com/dirtyharryiv/bitcoin_de_ha/issues).
+
+## Disclaimer
+
+This project is an independent integration and is not affiliated with, endorsed by, or supported by Bitcoin.de. Use this integration at your own risk. The author assumes no responsibility for any financial loss, API access issues, or account-related problems resulting from the use of this software.
