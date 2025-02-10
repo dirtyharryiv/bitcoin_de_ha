@@ -10,7 +10,7 @@ from aiohttp import ClientError, ClientSession
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import API_ACCOUNT_URL, API_RATES_URL, UPDATE_INTERVAL
+from .const import API_ACCOUNT_URL, API_RATES_URL, ATTR_TOTAL, UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class BitcoinDeCoordinator(DataUpdateCoordinator):
         self._api_key = api_key
         self._api_secret = api_secret
         self._currencies = currencies
-        self.data = {"balances": {}, "eur_rates": {}}
+        self.data = {"balances": {}, "eur_rates": {}, "total_balance_eur": 0.0}
 
     async def _async_update_data(self) -> dict:
         nonce = str(int(time.time() * 1_000_000))
@@ -67,6 +67,19 @@ class BitcoinDeCoordinator(DataUpdateCoordinator):
             raise UpdateFailed from error
 
         data["eur_rates"] = await self._fetch_currency_rates()
+        total_balance = 0.0
+        for currency, balance in data["balances"].items():
+            amount = float(balance.get(ATTR_TOTAL, 0.0))
+            currency_rate = data["eur_rates"].get(currency, {})
+
+            if isinstance(currency_rate, dict):
+                rate = float(currency_rate.get("rate_weighted", 0.0))
+            else:
+                rate = float(currency_rate)
+
+            total_balance += amount * rate
+
+        data["total_balance_eur"] = total_balance
 
         return data
 

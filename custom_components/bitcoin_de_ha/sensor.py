@@ -2,11 +2,12 @@
 
 import logging
 
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.config_entries import (
     ConfigEntry,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import (
     AddEntitiesCallback,
     async_get_platforms,
@@ -36,7 +37,11 @@ async def async_setup_entry(
         "currencies", entry.data.get("currencies", [])
     )
 
-    sensors = [CryptoBalanceSensor(coordinator, currency) for currency in currencies]
+    sensors: list[SensorEntity] = [
+        CryptoBalanceSensor(coordinator, currency) for currency in currencies
+    ]
+
+    sensors.append(BitcoinDeTotalBalanceSensor(coordinator))
 
     async_add_entities(sensors, update_before_add=True)
 
@@ -74,12 +79,16 @@ async def async_force_reload(hass: HomeAssistant, entry: ConfigEntry) -> None:
         "currencies", entry.data.get("currencies", [])
     )
 
-    sensors = [CryptoBalanceSensor(coordinator, currency) for currency in currencies]
+    sensors: list[SensorEntity] = [
+        CryptoBalanceSensor(coordinator, currency) for currency in currencies
+    ]
+
+    sensors.append(BitcoinDeTotalBalanceSensor(coordinator))
 
     await async_add_entities(sensors, update_before_add=True)
 
 
-class CryptoBalanceSensor(CoordinatorEntity, Entity):
+class CryptoBalanceSensor(CoordinatorEntity, SensorEntity):
     """Sensor to represent cryptocurrency balance."""
 
     def __init__(self, coordinator: BitcoinDeCoordinator, currency: str) -> None:
@@ -126,3 +135,20 @@ class CryptoBalanceSensor(CoordinatorEntity, Entity):
             ATTR_EUR_RATE: float(rate),
             ATTR_EUR_BAL: float(rate) * total_amount,
         }
+
+
+class BitcoinDeTotalBalanceSensor(SensorEntity):
+    """Sensor for the total balance in EUR."""
+
+    def __init__(self, coordinator: BitcoinDeCoordinator) -> None:
+        """Initialize the sensor."""
+        self.coordinator = coordinator
+        self._attr_name = "Bitcoin.de Total Balance EUR"
+        self._attr_unique_id = "bitcoin_de_total_balance"
+        self._attr_device_class = SensorDeviceClass.MONETARY
+        self._attr_native_unit_of_measurement = "EUR"
+
+    @property
+    def state(self) -> float:
+        """Return the total balance in EUR."""
+        return self.coordinator.data.get("total_balance_eur", 0.0)

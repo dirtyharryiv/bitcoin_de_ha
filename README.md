@@ -34,6 +34,11 @@ Each sensor provides the following attributes:
 - **Available Amount**: Funds available for trading
 - **Reserved Amount**: Funds reserved for active orders
 - **Total Amount**: The total balance for the respective cryptocurrency
+- **Euro Rates**: The euro rates
+- **Euro Balance**: The euro balance
+
+A total Euro balance sensor is created as well:
+- `sensor.bitcoin_de_total_balance_eur`
 
 ## Troubleshooting & Support
 - Ensure your API key has the necessary permissions to access balance data.

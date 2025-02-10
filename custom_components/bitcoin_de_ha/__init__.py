@@ -9,7 +9,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import DOMAIN
 from .coordinator import BitcoinDeCoordinator
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 _LOGGER = logging.getLogger(__name__)
 
