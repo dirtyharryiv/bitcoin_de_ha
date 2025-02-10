@@ -1,0 +1,12 @@
+{
+  "domain": "bitcoin_de_ha",
+  "name": "Bitcoin.de API",
+  "codeowners": [
+    "@dirtyharryiv"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/dirtyharryiv/bitcoin_de_ha",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/dirtyharryiv/bitcoin_de_ha/issues",
+  "version": "1.0.0"
+}

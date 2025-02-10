@@ -1,0 +1,17 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "description": "You can get your API Key here https://www.bitcoin.de/de/userprofile/tapi",
+                "data": {
+                    "api_key": "Bitcoin.de API Key",
+                    "api_secret": "Bitcoin.de API Secret"
+                }
+            }
+        },
+        "error": {},
+        "abort": {
+            "already_configured": "This entry is already configured."
+        }
+    }
+}
